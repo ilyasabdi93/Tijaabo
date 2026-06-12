@@ -1603,3 +1603,248 @@
 
 </body>
 </html>
+ 
+ // Continuing OTP handling functions
+    function handleOTPKeydown(e, index) {
+      if (e.key === 'Backspace' && !state.otp[index] && index > 0) {
+        document.getElementById('otp-' + (index - 1)).focus();
+      }
+      if (e.key === 'ArrowLeft' && index > 0) {
+        document.getElementById('otp-' + (index - 1)).focus();
+      }
+      if (e.key === 'ArrowRight' && index < 5) {
+        document.getElementById('otp-' + (index + 1)).focus();
+      }
+    }
+
+    function handleOTPPaste(e) {
+      e.preventDefault();
+      const data = e.clipboardData.getData('text/plain').replace(/\D/g, '').slice(0, 6);
+      for (let i = 0; i < 6; i++) {
+        state.otp[i] = data[i] || '';
+        const el = document.getElementById('otp-' + i);
+        if (el) {
+          el.value = state.otp[i];
+          if (state.otp[i]) el.classList.add('filled');
+        }
+      }
+      const btn = document.getElementById('verify-otp-btn');
+      btn.disabled = !state.otp.every(o => o);
+      if (state.otp.every(o => o)) {
+        document.getElementById('verify-otp-btn').focus();
+      }
+    }
+
+    function startCountdown() {
+      state.countdown = 60;
+      const secondsEl = document.getElementById('countdown-seconds');
+      const resendBtn = document.getElementById('resend-otp-btn');
+      if (!secondsEl || !resendBtn) return;
+      
+      resendBtn.disabled = true;
+      if (state.countdownInterval) clearInterval(state.countdownInterval);
+      
+      state.countdownInterval = setInterval(() => {
+        state.countdown--;
+        secondsEl.textContent = state.countdown;
+        if (state.countdown <= 0) {
+          clearInterval(state.countdownInterval);
+          state.countdownInterval = null;
+          resendBtn.disabled = false;
+          secondsEl.parentElement.innerHTML = 'Didn\'t receive the code? ';
+        }
+      }, 1000);
+    }
+
+    window.handleResendOTP = function() {
+      const email = state.emailForReset;
+      const otp = generateOTP();
+      const otpData = { email, otp, expiresAt: Date.now() + 5 * 60 * 1000 };
+      const otps = DB.otps.filter(o => o.email !== email);
+      otps.push(otpData);
+      DB.otps = otps;
+      
+      state.otp = ['', '', '', '', '', ''];
+      for (let i = 0; i < 6; i++) {
+        const el = document.getElementById('otp-' + i);
+        if (el) { el.value = ''; el.classList.remove('filled'); }
+      }
+      document.getElementById('otp-0').focus();
+      document.getElementById('verify-otp-btn').disabled = true;
+      
+      console.log(`[DEV] New OTP for ${email}: ${otp}`);
+      Toast.show('New OTP sent to your email', 'success');
+      startCountdown();
+    };
+
+    window.handleVerifyOTP = function() {
+      const otpString = state.otp.join('');
+      if (otpString.length !== 6) return;
+      
+      const btn = document.getElementById('verify-otp-btn');
+      const text = document.getElementById('verify-otp-text');
+      const spinner = document.getElementById('verify-otp-spinner');
+      btn.disabled = true;
+      text.classList.add('hidden');
+      spinner.classList.remove('hidden');
+      
+      setTimeout(() => {
+        const otps = DB.otps;
+        const record = otps.find(o => o.email === state.emailForReset && o.otp === otpString);
+        
+        if (!record) {
+          Toast.show('Invalid OTP. Please try again.', 'error');
+          document.getElementById('otp-error').textContent = 'Invalid OTP';
+          document.getElementById('otp-error').classList.remove('hidden');
+          btn.disabled = false;
+          text.classList.remove('hidden');
+          spinner.classList.add('hidden');
+          return;
+        }
+        
+        if (Date.now() > record.expiresAt) {
+          Toast.show('OTP has expired. Request a new one.', 'error');
+          document.getElementById('otp-error').textContent = 'OTP expired';
+          document.getElementById('otp-error').classList.remove('hidden');
+          btn.disabled = false;
+          text.classList.remove('hidden');
+          spinner.classList.add('hidden');
+          return;
+        }
+        
+        // OTP verified
+        DB.otps = otps.filter(o => !(o.email === state.emailForReset && o.otp === otpString));
+        state.otpVerified = true;
+        Toast.show('OTP verified successfully!', 'success');
+        navigate('reset-password');
+      }, 1000);
+    };
+
+          // --- RESET SUCCESS ---
+    function renderResetSuccess() {
+      const container = document.createElement('div');
+      container.className = 'page';
+      container.innerHTML = `
+        <div class="auth-card" style="text-align:center;padding:3rem 2rem;">
+          <div class="success-container">
+            <div class="checkmark-circle">
+              <svg viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h2 class="success-title">Password Reset!</h2>
+            <p class="success-subtitle">Your password has been successfully reset. You can now sign in with your new password.</p>
+          </div>
+          <button class="btn btn-primary" onclick="navigate('login')" style="margin-top:1rem;">
+            Sign In
+          </button>
+        </div>
+      `;
+      return container;
+    }
+          // --- DASHBOARD ---
+    function renderDashboard() {
+      const session = DB.session;
+      const container = document.createElement('div');
+      container.className = 'page';
+      container.style.maxWidth = '600px';
+      
+      const displayName = session ? session.fullName : 'User';
+      const displayEmail = session ? session.email : '—';
+      
+      container.innerHTML = `
+        <div class="auth-card" style="padding:2rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div style="width:44px;height:44px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;">${displayName.charAt(0).toUpperCase()}</div>
+              <div>
+                <p style="font-weight:600;">${displayName}</p>
+                <p style="font-size:0.8rem;color:var(--secondary);">${displayEmail}</p>
+              </div>
+            </div>
+            <span style="padding:0.35rem 0.75rem;border-radius:20px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);font-size:0.75rem;color:var(--success);font-weight:500;">Verified</span>
+          </div>
+
+          <h2 style="font-size:1.25rem;margin-bottom:1.5rem;">Welcome to AuthPro</h2>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:2rem;">
+            <div class="glass-light" style="padding:1.25rem;border-radius:16px;">
+              <p style="font-size:0.75rem;color:var(--secondary);margin-bottom:0.35rem;">Account Status</p>
+              <p style="font-weight:600;color:var(--success);">Active</p>
+            </div>
+            <div class="glass-light" style="padding:1.25rem;border-radius:16px;">
+              <p style="font-size:0.75rem;color:var(--secondary);margin-bottom:0.35rem;">Role</p>
+              <p style="font-weight:600;">User</p>
+            </div>
+            <div class="glass-light" style="padding:1.25rem;border-radius:16px;">
+              <p style="font-size:0.75rem;color:var(--secondary);margin-bottom:0.35rem;">Auth Method</p>
+              <p style="font-weight:600;">Email & Password</p>
+            </div>
+            <div class="glass-light" style="padding:1.25rem;border-radius:16px;">
+              <p style="font-size:0.75rem;color:var(--secondary);margin-bottom:0.35rem;">2FA</p>
+              <p style="font-weight:600;color:var(--warning);">Not Enabled</p>
+            </div>
+          </div>
+
+          <button class="btn btn-secondary" onclick="handleLogout()" style="margin-bottom:0.5rem;">
+            Sign Out
+          </button>
+        </div>
+      `;
+      return container;
+    }
+
+    window.handleLogout = function() {
+      DB.session = null;
+      state.email = '';
+      state.password = '';
+      state.fullName = '';
+      Toast.show('Signed out successfully', 'info');
+      navigate('welcome');
+    };
+          // ============================================================
+    //  ROUTER
+    // ============================================================
+    function renderPage(page) {
+      switch (page) {
+        case 'welcome': return renderWelcome();
+        case 'login': return renderLogin();
+        case 'register': return renderRegister();
+        case 'forgot-password': return renderForgotPassword();
+        case 'verify-otp': return renderVerifyOTP();
+        case 'reset-password': return renderResetPassword();
+        case 'reset-success': return renderResetSuccess();
+        case 'verify-email': return renderVerifyEmail();
+        case 'dashboard': return renderDashboard();
+        default: return renderWelcome();
+      }
+    }
+
+    // ============================================================
+    //  INIT
+    // ============================================================
+    (function init() {
+      const session = DB.session;
+      if (session) {
+        render('dashboard');
+      } else {
+        render('welcome');
+      }
+    })();
+  </script>
+</body>
+      </html>
+          import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBcOwtdjezq3SogvKTm0S-8p5TfFIDRqXg",
+  authDomain: "my-finald-451.firebaseapp.com",
+  projectId: "my-finald-451",
+  // ...
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
