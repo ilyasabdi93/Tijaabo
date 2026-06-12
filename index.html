@@ -856,10 +856,13 @@ $("#updatePassBtn").addEventListener("click", () => {
 });
 </script>
   <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
 import {
   getAuth,
   GoogleAuthProvider,
+  FacebookAuthProvider,
   signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -874,24 +877,22 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-
-document.querySelectorAll('[data-social="Google"]').forEach(btn => {
+  
+  document.querySelectorAll('[data-social="Facebook"]').forEach(btn => {
   btn.addEventListener("click", async () => {
     try {
-      const provider = new GoogleAuthProvider();
+      const provider = new FacebookAuthProvider();
       const result = await signInWithPopup(auth, provider);
 
       alert("Welcome " + result.user.displayName);
 
-      // Bogga gudaha kadib login
-      alert("Login Successful!");
+      window.location.href = "dashboard.html";
 
     } catch (error) {
       alert(error.message);
       console.error(error);
     }
   });
-});
   </script>
 </body>
 </html>
