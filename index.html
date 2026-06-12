@@ -10,7 +10,6 @@
 
     <!-- Firebase v10 Modular SDK -->
     <script type="module">
-        // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
         import {
             getAuth,
@@ -19,10 +18,12 @@
             sendPasswordResetEmail,
             sendEmailVerification,
             onAuthStateChanged,
-            signOut
+            signOut,
+            GoogleAuthProvider,
+            FacebookAuthProvider,
+            signInWithPopup
         } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 
-        // Make Firebase available globally
         window.firebaseApp = initializeApp;
         window.firebaseAuth = {
             getAuth,
@@ -31,7 +32,10 @@
             sendPasswordResetEmail,
             sendEmailVerification,
             onAuthStateChanged,
-            signOut
+            signOut,
+            GoogleAuthProvider,
+            FacebookAuthProvider,
+            signInWithPopup
         };
     </script>
 
@@ -65,10 +69,11 @@
             --error: #ff1744;
             --warning: #ffab00;
             --spinner-color: #6c63ff;
+            --google-color: #ea4335;
+            --facebook-color: #1877f2;
             --transition-speed: 0.35s;
         }
 
-        /* Light theme overrides */
         [data-theme="light"] {
             --bg-primary: #e8eaf6;
             --bg-secondary: #c5cae9;
@@ -86,6 +91,8 @@
             --input-border: rgba(0, 0, 0, 0.12);
             --input-focus: rgba(92, 107, 192, 0.4);
             --spinner-color: #5c6bc0;
+            --google-color: #ea4335;
+            --facebook-color: #1877f2;
         }
 
         html {
@@ -106,7 +113,6 @@
             overflow-x: hidden;
         }
 
-        /* Animated background orbs */
         body::before,
         body::after {
             content: '';
@@ -207,10 +213,6 @@
             color: #fff;
         }
 
-        .theme-toggle label .toggle-ball i {
-            transition: transform 0.3s ease;
-        }
-
         .theme-toggle input:checked+label .toggle-ball {
             transform: translateX(24px);
         }
@@ -233,7 +235,7 @@
         /* ========== HEADER / LOGO ========== */
         .auth-header {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
 
         .auth-header .logo {
@@ -269,7 +271,7 @@
             background: rgba(255, 255, 255, 0.06);
             border-radius: 12px;
             padding: 4px;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
         }
 
         .auth-tab {
@@ -326,11 +328,11 @@
         .form-subtitle {
             font-size: 13px;
             color: var(--text-secondary);
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             position: relative;
         }
 
@@ -359,7 +361,7 @@
 
         .input-wrapper input {
             width: 100%;
-            padding: 13px 14px 13px 44px;
+            padding: 12px 14px 12px 44px;
             background: var(--input-bg);
             border: 1.5px solid var(--input-border);
             border-radius: 12px;
@@ -378,12 +380,6 @@
             box-shadow: 0 0 0 3px var(--input-focus);
         }
 
-        .input-wrapper input:focus~.input-icon,
-        .input-wrapper input:focus+.input-icon {
-            color: var(--accent);
-        }
-
-        /* Toggle password visibility */
         .toggle-password {
             position: absolute;
             right: 14px;
@@ -405,7 +401,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 22px;
+            margin-bottom: 20px;
             font-size: 13px;
         }
 
@@ -438,10 +434,104 @@
             opacity: 0.8;
         }
 
+        /* ========== DIVIDER ========== */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 22px 0 20px;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--glass-border);
+        }
+
+        /* ========== SOCIAL BUTTONS ========== */
+        .social-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .btn-social {
+            width: 100%;
+            padding: 12px;
+            border: 1.5px solid var(--glass-border);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            position: relative;
+        }
+
+        .btn-social:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-social:active {
+            transform: translateY(0);
+        }
+
+        .btn-social .spinner-sm {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        .btn-social.loading .spinner-sm {
+            display: inline-block;
+        }
+        .btn-social.loading .social-text {
+            display: none;
+        }
+        .btn-social.loading .social-icon {
+            display: none;
+        }
+
+        .btn-google:hover {
+            border-color: var(--google-color);
+            background: rgba(234, 67, 53, 0.08);
+        }
+
+        .btn-google .social-icon {
+            color: var(--google-color);
+            font-size: 18px;
+        }
+
+        .btn-facebook:hover {
+            border-color: var(--facebook-color);
+            background: rgba(24, 119, 242, 0.08);
+        }
+
+        .btn-facebook .social-icon {
+            color: var(--facebook-color);
+            font-size: 18px;
+        }
+
         /* ========== BUTTONS ========== */
         .btn-primary {
             width: 100%;
-            padding: 13px;
+            padding: 12px;
             background: linear-gradient(135deg, var(--accent), var(--accent-hover));
             color: #fff;
             border: none;
@@ -550,7 +640,7 @@
         /* ========== SWITCH FORM LINK ========== */
         .switch-form {
             text-align: center;
-            margin-top: 22px;
+            margin-top: 20px;
             font-size: 13px;
             color: var(--text-secondary);
         }
@@ -574,7 +664,7 @@
         .signed-in-state {
             display: none;
             text-align: center;
-            padding: 20px 0;
+            padding: 16px 0;
         }
 
         .signed-in-state.show {
@@ -592,8 +682,16 @@
             justify-content: center;
             font-size: 32px;
             color: #fff;
-            margin: 0 auto 16px;
+            margin: 0 auto 14px;
             box-shadow: 0 8px 24px var(--accent-glow);
+            overflow: hidden;
+        }
+
+        .signed-in-state .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
         }
 
         .signed-in-state h2 {
@@ -604,13 +702,19 @@
         .signed-in-state p {
             color: var(--text-secondary);
             font-size: 14px;
-            margin-bottom: 24px;
+            margin-bottom: 6px;
             word-break: break-all;
         }
 
         .signed-in-state .user-email {
             font-weight: 600;
             color: var(--accent);
+        }
+
+        .signed-in-state .user-name {
+            font-weight: 700;
+            font-size: 20px;
+            margin-bottom: 2px;
         }
 
         .btn-secondary {
@@ -623,6 +727,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s ease, border 0.3s ease;
+            margin-top: 12px;
         }
 
         .btn-secondary:hover {
@@ -680,6 +785,11 @@
             .input-wrapper .input-icon {
                 left: 11px;
                 font-size: 13px;
+            }
+
+            .btn-social {
+                font-size: 13px;
+                padding: 10px;
             }
         }
     </style>
@@ -759,6 +869,22 @@
                 </button>
             </form>
 
+            <!-- Divider + Social Buttons -->
+            <div class="divider">or continue with</div>
+
+            <div class="social-buttons">
+                <button type="button" class="btn-social btn-google" id="googleLoginBtn" onclick="handleGoogleSignIn()">
+                    <i class="fab fa-google social-icon"></i>
+                    <span class="social-text">Sign in with Google</span>
+                    <span class="spinner-sm"></span>
+                </button>
+                <button type="button" class="btn-social btn-facebook" id="facebookLoginBtn" onclick="handleFacebookSignIn()">
+                    <i class="fab fa-facebook-f social-icon"></i>
+                    <span class="social-text">Sign in with Facebook</span>
+                    <span class="spinner-sm"></span>
+                </button>
+            </div>
+
             <div class="switch-form">
                 Don't have an account? <button type="button" onclick="switchForm('register')">Create one</button>
             </div>
@@ -814,6 +940,22 @@
                 </button>
             </form>
 
+            <!-- Divider + Social Buttons -->
+            <div class="divider">or sign up with</div>
+
+            <div class="social-buttons">
+                <button type="button" class="btn-social btn-google" id="googleRegBtn" onclick="handleGoogleSignIn()">
+                    <i class="fab fa-google social-icon"></i>
+                    <span class="social-text">Sign up with Google</span>
+                    <span class="spinner-sm"></span>
+                </button>
+                <button type="button" class="btn-social btn-facebook" id="facebookRegBtn" onclick="handleFacebookSignIn()">
+                    <i class="fab fa-facebook-f social-icon"></i>
+                    <span class="social-text">Sign up with Facebook</span>
+                    <span class="spinner-sm"></span>
+                </button>
+            </div>
+
             <div class="switch-form">
                 Already have an account? <button type="button" onclick="switchForm('login')">Sign in</button>
             </div>
@@ -846,12 +988,12 @@
 
         <!-- ========== SIGNED-IN STATE ========== -->
         <div class="signed-in-state" id="signedInState">
-            <div class="avatar">
+            <div class="avatar" id="userAvatar">
                 <i class="fas fa-user-check"></i>
             </div>
-            <h2>Welcome!</h2>
-            <p>You are signed in as<br><span class="user-email" id="signedInEmail">user@example.com</span></p>
-            <p id="verificationStatus" style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;"></p>
+            <h2 class="user-name" id="signedInName">Welcome!</h2>
+            <p>Signed in as<br><span class="user-email" id="signedInEmail">user@example.com</span></p>
+            <p id="verificationStatus" style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;"></p>
             <button class="btn-secondary" onclick="handleSignOut()">
                 <i class="fas fa-sign-out-alt"></i> Sign Out
             </button>
@@ -874,30 +1016,39 @@
         };
 
         // ========================================================
-        //  FIREBASE INIT — waits for SDK to load
+        //  FIREBASE INIT
         // ========================================================
         let auth = null;
         let app = null;
+        let googleProvider = null;
+        let facebookProvider = null;
 
         function initFirebase() {
             if (typeof window.firebaseApp === 'undefined') {
-                console.warn('Firebase SDK not loaded yet, retrying in 300ms...');
                 setTimeout(initFirebase, 300);
                 return;
             }
             try {
                 app = window.firebaseApp(firebaseConfig);
                 auth = window.firebaseAuth.getAuth(app);
-                console.log('✅ Firebase initialized');
+
+                // Create providers
+                googleProvider = new window.firebaseAuth.GoogleAuthProvider();
+                googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+                facebookProvider = new window.firebaseAuth.FacebookAuthProvider();
+                facebookProvider.addScope('email');
+                facebookProvider.addScope('public_profile');
+
                 // Listen for auth state
                 window.firebaseAuth.onAuthStateChanged(auth, handleAuthStateChange);
+                console.log('✅ Firebase initialized with Google & Facebook providers');
             } catch (err) {
                 console.error('❌ Firebase init error:', err);
                 showMessage('error', 'Firebase configuration error. Check console.');
             }
         }
 
-        // Start init once DOM is ready
         document.addEventListener('DOMContentLoaded', initFirebase);
 
         // ========================================================
@@ -915,7 +1066,9 @@
         const signedInState = document.getElementById('signedInState');
         const authTabs = document.getElementById('authTabs');
         const signedInEmail = document.getElementById('signedInEmail');
+        const signedInName = document.getElementById('signedInName');
         const verificationStatus = document.getElementById('verificationStatus');
+        const userAvatar = document.getElementById('userAvatar');
 
         // ========================================================
         //  THEME MANAGEMENT
@@ -937,7 +1090,6 @@
             applyTheme(current === 'dark' ? 'light' : 'dark');
         }
 
-        // Load saved theme or system default
         (function loadTheme() {
             const saved = localStorage.getItem('auth-theme');
             applyTheme(saved || getSystemTheme());
@@ -945,7 +1097,6 @@
 
         themeSwitch.addEventListener('change', toggleTheme);
 
-        // Listen for system theme changes
         window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
             if (!localStorage.getItem('auth-theme')) {
                 applyTheme(e.matches ? 'light' : 'dark');
@@ -977,32 +1128,21 @@
         // ========================================================
         function switchForm(formName) {
             hideMessage();
-
-            // Hide all forms
             Object.values(forms).forEach(f => f.classList.remove('active'));
-            // Show target
             if (forms[formName]) forms[formName].classList.add('active');
-
-            // Update tabs
             tabs.forEach(t => {
                 t.classList.toggle('active', t.dataset.form === formName);
             });
-
-            // Show tabs only for login/register
             authTabs.style.display = (formName === 'forgot') ? 'none' : 'flex';
         }
 
-        // Tab click handlers
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const formName = tab.dataset.form;
-                if (formName && forms[formName]) {
-                    switchForm(formName);
-                }
+                if (formName && forms[formName]) switchForm(formName);
             });
         });
 
-        // Switch to forgot password (called from link)
         function showForgotPassword() {
             hideMessage();
             Object.values(forms).forEach(f => f.classList.remove('active'));
@@ -1049,22 +1189,33 @@
         // ========================================================
         function handleAuthStateChange(user) {
             if (user) {
-                // User is signed in
-                signedInEmail.textContent = user.email;
-                if (user.emailVerified) {
-                    verificationStatus.textContent = '✅ Email verified';
+                // Display name
+                const displayName = user.displayName || user.email?.split('@')[0] || 'User';
+                signedInName.textContent = displayName;
+                signedInEmail.textContent = user.email || 'No email available';
+
+                // Avatar
+                if (user.photoURL) {
+                    userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Avatar">`;
+                } else {
+                    const initial = displayName.charAt(0).toUpperCase();
+                    userAvatar.innerHTML = `<span style="font-size:28px;font-weight:700;">${initial}</span>`;
+                }
+
+                // Verification status
+                if (user.emailVerified || user.providerData?.some(p => p.providerId !== 'password')) {
+                    verificationStatus.textContent = '✅ Account active';
                     verificationStatus.style.color = 'var(--success)';
                 } else {
                     verificationStatus.innerHTML =
                         '⚠️ Email not verified. <a href="#" onclick="resendVerification();return false;" style="color:var(--accent);">Resend verification</a>';
                     verificationStatus.style.color = 'var(--warning)';
                 }
-                // Hide forms, show signed-in state
+
                 Object.values(forms).forEach(f => f.classList.remove('active'));
                 authTabs.style.display = 'none';
                 signedInState.classList.add('show');
             } else {
-                // User is signed out
                 signedInState.classList.remove('show');
                 authTabs.style.display = 'flex';
                 switchForm('login');
@@ -1096,13 +1247,72 @@
                 'auth/user-disabled': 'This account has been disabled.',
                 'auth/email-already-in-use': 'An account with this email already exists.',
                 'auth/weak-password': 'Password must be at least 6 characters.',
-                'auth/operation-not-allowed': 'This authentication method is not enabled.',
+                'auth/operation-not-allowed': 'This sign-in method is not enabled in Firebase Console.',
                 'auth/too-many-requests': 'Too many attempts. Please try again later.',
                 'auth/network-request-failed': 'Network error. Check your connection.',
-                'auth/popup-closed-by-user': 'Authentication popup was closed.',
+                'auth/popup-closed-by-user': 'Sign-in popup was closed before completing.',
+                'auth/account-exists-with-different-credential': 'An account already exists with the same email but different sign-in method.',
+                'auth/cancelled-popup-request': 'Sign-in cancelled.',
                 'auth/requires-recent-login': 'Please sign out and sign in again before retrying.'
             };
             return map[code] || 'Something went wrong. Please try again.';
+        }
+
+        // ========================================================
+        //  SOCIAL SIGN-IN — GOOGLE
+        // ========================================================
+        async function handleGoogleSignIn() {
+            if (!auth || !googleProvider) {
+                showMessage('error', 'Firebase not initialized. Please wait.');
+                return;
+            }
+
+            // Set loading on both Google buttons
+            setLoading('googleLoginBtn', true);
+            setLoading('googleRegBtn', true);
+
+            try {
+                const result = await window.firebaseAuth.signInWithPopup(auth, googleProvider);
+                const user = result.user;
+                showMessage('success', 'Signed in with Google! Welcome ' + (user.displayName || ''));
+            } catch (err) {
+                if (err.code === 'auth/popup-closed-by-user') {
+                    showMessage('info', 'Sign-in popup was closed.');
+                } else {
+                    showMessage('error', getFirebaseErrorMessage(err.code));
+                }
+            }
+
+            setLoading('googleLoginBtn', false);
+            setLoading('googleRegBtn', false);
+        }
+
+        // ========================================================
+        //  SOCIAL SIGN-IN — FACEBOOK
+        // ========================================================
+        async function handleFacebookSignIn() {
+            if (!auth || !facebookProvider) {
+                showMessage('error', 'Firebase not initialized. Please wait.');
+                return;
+            }
+
+            setLoading('facebookLoginBtn', true);
+            setLoading('facebookRegBtn', true);
+
+            try {
+                const result = await window.firebaseAuth.signInWithPopup(auth, facebookProvider);
+                const user = result.user;
+                showMessage('success', 'Signed in with Facebook! Welcome ' + (user.displayName || ''));
+            } catch (err) {
+                if (err.code === 'auth/popup-closed-by-user') {
+                    showMessage('info', 'Sign-in popup was closed.');
+                } else {
+                    showMessage('error', getFirebaseErrorMessage(err.code));
+                }
+            }
+
+            setLoading('facebookLoginBtn', false);
+            setLoading('facebookRegBtn', false);
         }
 
         // ========================================================
@@ -1118,7 +1328,6 @@
             const password = document.getElementById('loginPassword').value;
             const remember = document.getElementById('rememberMe').checked;
 
-            // Validation
             if (!email || !password) {
                 showMessage('error', 'Please fill in all fields.');
                 return;
@@ -1138,7 +1347,6 @@
                 const userCredential = await window.firebaseAuth.signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Check email verification
                 if (!user.emailVerified) {
                     showMessage('info', 'Please verify your email before logging in. Check your inbox.');
                     await window.firebaseAuth.signOut(auth);
@@ -1147,7 +1355,6 @@
                 }
 
                 showMessage('success', 'Logged in successfully!');
-                // Auth state listener will handle UI change
             } catch (err) {
                 showMessage('error', getFirebaseErrorMessage(err.code));
             }
@@ -1169,7 +1376,6 @@
             const password = document.getElementById('regPassword').value;
             const confirm = document.getElementById('regConfirm').value;
 
-            // Validation
             if (!name || !email || !password || !confirm) {
                 showMessage('error', 'Please fill in all fields.');
                 return;
@@ -1193,7 +1399,6 @@
                 const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Send email verification
                 await window.firebaseAuth.sendEmailVerification(user);
 
                 showMessage('success',
@@ -1201,10 +1406,7 @@
                     '. Please verify before logging in.'
                 );
 
-                // Sign out so user must verify before login
                 await window.firebaseAuth.signOut(auth);
-
-                // Switch to login form
                 setTimeout(() => switchForm('login'), 1500);
             } catch (err) {
                 showMessage('error', getFirebaseErrorMessage(err.code));
@@ -1260,14 +1462,14 @@
         }
 
         // ========================================================
-        //  KEYBOARD SHORTCUT: Escape hides message
+        //  KEYBOARD SHORTCUT
         // ========================================================
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') hideMessage();
         });
 
-        console.log('🔐 AuthFlow ready — replace firebaseConfig with your project keys.');
+        console.log('🔐 AuthFlow ready — Google & Facebook login enabled.');
     </script>
 
 </body>
-                  </html>
+                        </html>
